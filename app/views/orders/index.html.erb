@@ -1,0 +1,9 @@
+<h2>Order Saya</h2>
+<div class="card">
+  <table>
+    <tr><th>Produk</th><th>Qty</th><th>Total</th></tr>
+    <% @orders.each do |o| %>
+      <tr><td><%= o.product.name %></td><td><%= o.quantity %></td><td>Rp <%= number_with_delimiter(o.total_price.to_i) %></td></tr>
+    <% end %>
+  </table>
+</div>

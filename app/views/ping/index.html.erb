@@ -1,0 +1,14 @@
+<div class="card">
+  <h2>Ping Tool (Command Injection)</h2>
+  <%= form_with url: ping_path, method: :post do %>
+    <input type="text" name="ip" value="<%= params[:ip] %>" placeholder="8.8.8.8">
+    <button class="btn">Ping</button>
+  <% end %>
+</div>
+
+<% if @output %>
+  <div class="card">
+    <h3>Output</h3>
+    <pre><%= @output %></pre>
+  </div>
+<% end %>

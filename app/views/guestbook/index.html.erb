@@ -1,0 +1,18 @@
+<div class="card">
+  <h2>Guestbook (HTML Injection)</h2>
+  <%= form_with url: guestbook_path, method: :post do %>
+    <input type="text" name="name" placeholder="Nama">
+    <textarea name="message" rows="3" placeholder="Pesan..."></textarea>
+    <button class="btn">Kirim</button>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>Pesan (<%= @entries.count %>)</h3>
+  <% @entries.each do |e| %>
+    <div class="comment">
+      <b><%= e.name %>:</b>
+      <div><%= raw e.message %></div>
+    </div>
+  <% end %>
+</div>

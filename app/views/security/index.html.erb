@@ -1,0 +1,12 @@
+<div class="card">
+  <h2>Security Level</h2>
+  <p>Level saat ini: <b><%= security_level %></b></p>
+  <%= form_with url: security_path, method: :post do %>
+    <select name="level">
+      <option value="low"    <%= "selected" if security_level=="low" %>>Low</option>
+      <option value="medium" <%= "selected" if security_level=="medium" %>>Medium</option>
+      <option value="high"   <%= "selected" if security_level=="high" %>>High</option>
+    </select>
+    <button class="btn">Simpan</button>
+  <% end %>
+</div>

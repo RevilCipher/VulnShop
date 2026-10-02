@@ -1,0 +1,12 @@
+<div class="card">
+  <h2>Transfer Saldo (CSRF Lab)</h2>
+  <% if current_user %>
+    <p>Saldo: Rp <%= number_with_delimiter(@balance.to_i) %></p>
+    <%= form_with url: csrf_lab_transfer_path, method: :post do %>
+      <input type="number" name="amount" placeholder="Jumlah transfer">
+      <button class="btn">Transfer</button>
+    <% end %>
+  <% else %>
+    <p><a href="/login">Login</a> dulu untuk tes CSRF.</p>
+  <% end %>
+</div>

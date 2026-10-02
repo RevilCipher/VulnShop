@@ -1,0 +1,63 @@
+<section class="section" style="padding-top:32px">
+  <div class="wrap">
+
+    <div class="section-header">
+      <h2>🌐 RFI / LFI / SSRF / RCE Lab</h2>
+      <p>Pilih level, pilih mode, masukin URL, klik Fetch.</p>
+    </div>
+
+    <!-- LEVEL -->
+    <div class="card">
+      <p style="margin:0">
+        <strong>Level:</strong>
+        <a href="/fetch?level=low"    class="level-badge level-low">LOW</a>
+        <a href="/fetch?level=medium" class="level-badge level-medium">MEDIUM</a>
+        <a href="/fetch?level=high"   class="level-badge level-high">HIGH</a>
+        <span style="margin-left:12px">Aktif: <b><%= (@level || "low").upcase %></b></span>
+      </p>
+    </div>
+
+    <!-- FORM -->
+    <div class="card">
+      <%= form_with url: fetch_path, method: :get, local: true do |f| %>
+        <input type="hidden" name="level" value="<%= @level %>">
+
+        <label for="mode"><strong>Mode</strong></label>
+        <select name="mode" id="mode"
+                style="width:100%; padding:8px; margin:4px 0 12px; border:1px solid #ddd; border-radius:4px">
+          <% %w[read eval system yaml marshal ssrf gopher].each do |m| %>
+            <option value="<%= m %>" <%= "selected" if @mode == m %>><%= m %></option>
+          <% end %>
+        </select>
+
+        <label for="url"><strong>URL / Path</strong></label>
+        <input type="text" id="url" name="url" value="<%= params[:url] %>"
+               placeholder="file:///etc/passwd"
+               style="width:100%; padding:10px; margin:4px 0 12px; border:1px solid #ddd; border-radius:4px; font-family:monospace">
+
+        <button type="submit" class="btn">Fetch</button>
+      <% end %>
+    </div>
+
+    <!-- HASIL -->
+    <% if @content %>
+      <% safe_content = @content.to_s.dup.force_encoding("UTF-8").scrub("?") %>
+      <div class="card">
+        <p style="font-size:12px; color:#666; margin:0 0 8px">
+          Mode <b><%= @mode %></b> |
+          Level <b><%= (@level || "low").upcase %></b> |
+          <%= safe_content.bytesize %> bytes
+        </p>
+
+        <% if safe_content.include?("Error") || safe_content.include?("❌") %>
+          <div style="background:#fee2e2; padding:10px; border-radius:4px; color:#991b1b; font-family:monospace; font-size:13px">
+            <%= safe_content %>
+          </div>
+        <% else %>
+          <pre style="background:#1a1a2e; color:#06d6a0; padding:15px; border-radius:4px; max-height:500px; overflow-y:auto; font-size:12px; margin:0; white-space:pre-wrap; word-break:break-all"><%= h(safe_content) %></pre>
+        <% end %>
+      </div>
+    <% end %>
+
+  </div>
+</section>

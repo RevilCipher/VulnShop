@@ -1,0 +1,14 @@
+<div class="card">
+  <h2>XML Parser (XXE Lab)</h2>
+  <%= form_with url: xml_path, method: :post do %>
+    <textarea name="xml" rows="8" placeholder="&lt;?xml version='1.0'?&gt;..."></textarea>
+    <button class="btn">Parse</button>
+  <% end %>
+</div>
+
+<% if @result %>
+  <div class="card">
+    <h3>Hasil</h3>
+    <pre><%= @result %></pre>
+  </div>
+<% end %>
