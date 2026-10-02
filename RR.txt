@@ -1,0 +1,18 @@
+==================================================
+dvwa password:
+hacktheplanet
+==================================================
+password bWAPP:
+venomizer
+===================================================
+XVWA password:
+p@ssword123
+===================================================
+
+'Ven0m' has been registered.
+Use this site key in the HTML code your site serves to users.
+6Le5qNktAAAAAHDlLcTTHk5pnf0i7yE2zUbaX25x
+Use this secret key for communication between your site and reCAPTCHA.
+
+If you are using SiteVerify, we recommend migrating to CreateAssessment. See instructions to migrate backend calls.
+6Le5qNktAAAAALGO0Y9350R5uHaHrGfwWAiI3CWd
