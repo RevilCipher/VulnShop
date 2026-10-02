@@ -1,0 +1,23 @@
+<h2>Produk</h2>
+<%= form_with url: products_path, method: :get do %>
+  <input type="text" name="q" value="<%= params[:q] %>" placeholder="Cari produk...">
+  <button class="btn">Cari</button>
+<% end %>
+
+<% if params[:q].present? %>
+  <p>Hasil pencarian: <b><%= raw params[:q] %></b></p>
+<% end %>
+
+<div class="card">
+  <table>
+    <tr><th>Nama</th><th>Harga</th><th>Stok</th><th></th></tr>
+    <% @products.each do |p| %>
+      <tr>
+        <td><%= p.name %></td>
+        <td>Rp <%= number_with_delimiter(p.price.to_i) %></td>
+        <td><%= p.stock %></td>
+        <td><a class="btn btn-sm" href="/products/<%= p.id %>">Detail</a></td>
+      </tr>
+    <% end %>
+  </table>
+</div>

@@ -1,0 +1,15 @@
+<div class="card">
+  <h2>Profil: <%= @user.username %></h2>
+  <p>Role: <%= @user.role %></p>
+  <p>Saldo: Rp <%= number_with_delimiter(@user.balance.to_i) %></p>
+</div>
+
+<div class="card">
+  <h3>Riwayat Order</h3>
+  <table>
+    <tr><th>Produk</th><th>Qty</th><th>Total</th></tr>
+    <% @orders.each do |o| %>
+      <tr><td><%= o.product.name %></td><td><%= o.quantity %></td><td>Rp <%= number_with_delimiter(o.total_price.to_i) %></td></tr>
+    <% end %>
+  </table>
+</div>

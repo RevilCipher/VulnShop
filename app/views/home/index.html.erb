@@ -1,0 +1,15 @@
+<h1>Selamat datang di VulnShop</h1>
+<div class="product-grid">
+  <% @products.each do |p| %>
+    <div class="product-card">
+      <div class="product-thumb"><%= p.name[0].upcase %></div>
+      <h3><%= p.name %></h3>
+      <p class="desc"><%= truncate(p.description, length: 80) %></p>
+      <div class="product-meta">
+        <span class="price">Rp <%= number_with_delimiter(p.price.to_i) %></span>
+        <span>Stok: <%= p.stock %></span>
+      </div>
+      <a class="btn" href="/products/<%= p.id %>">Lihat Detail</a>
+    </div>
+  <% end %>
+</div>

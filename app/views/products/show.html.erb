@@ -1,0 +1,45 @@
+<h2><%= @product.name %></h2>
+
+<div class="card">
+  <p><%= @product.description %></p>
+  <p>Harga: <b>Rp <%= number_with_delimiter(@product.price.to_i) %></b></p>
+  <p>Stok: <%= @product.stock %></p>
+</div>
+
+<% if current_user %>
+  <div class="card">
+    <h3>Beli</h3>
+    <%= form_with url: orders_path, method: :post do %>
+      <input type="hidden" name="product_id" value="<%= @product.id %>">
+      <input type="hidden" name="price" value="<%= @product.price %>">
+      Qty: <input type="number" name="quantity" value="1">
+      <button class="btn">Beli</button>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="card">
+  <h3>Komentar (<%= @comments.count %>)</h3>
+  <%= form_with url: product_comments_path(@product), method: :post do %>
+    <textarea name="comment[content]" rows="3" placeholder="Tulis komentar..."></textarea>
+    <button class="btn">Kirim</button>
+  <% end %>
+  <hr>
+  <% if @comments.any? %>
+    <% @comments.each do |c| %>
+      <div class="comment">
+        <div class="meta">
+          <span class="user"><%= c.user ? c.user.username : "Anonim" %></span>
+          <% if current_user && (current_user.id == c.user_id || current_user.role == "admin") %>
+            <%= button_to "Hapus", comment_path(c), method: :delete,
+                form: { style: "display:inline" },
+                class: "btn btn-danger btn-sm" %>
+          <% end %>
+        </div>
+        <div><%= raw c.content %></div>
+      </div>
+    <% end %>
+  <% else %>
+    <p style="color:#9ca3af">Belum ada komentar.</p>
+  <% end %>
+</div>

@@ -1,0 +1,16 @@
+<div class="card">
+  <h2>Upload File</h2>
+  <%= form_with url: upload_path, method: :post, multipart: true do %>
+    <input type="file" name="file">
+    <button class="btn">Upload</button>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>File tersimpan</h3>
+  <ul>
+    <% @files.each do |f| %>
+      <li><a href="/uploads/<%= f %>" target="_blank"><%= f %></a></li>
+    <% end %>
+  </ul>
+</div>

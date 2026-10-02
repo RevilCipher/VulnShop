@@ -1,0 +1,36 @@
+<section class="section" style="padding-top:32px">
+  <div class="wrap">
+    <div class="section-header">
+      <h2>File Reader (LFI Lab)</h2>
+      <p>Test Local File Inclusion vulnerability pada level: <strong><%= security_level.upcase %></strong></p>
+    </div>
+
+    <div class="card">
+      <form method="GET" style="margin-bottom:20px">
+        <input type="text" name="page" placeholder="Contoh (LOW): ../../../etc/passwd" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; font-family:monospace">
+        <button type="submit" class="btn">Baca File</button>
+      </form>
+
+      <div style="background:#f9f9f9; padding:15px; border-radius:4px; margin-bottom:20px; font-size:13px; color:#666">
+        <strong>Payload Examples:</strong><br>
+        <% if security_level == "low" %>
+          LOW: <code>../../../etc/passwd</code> / <code>.env</code> / <code>config/database.yml</code>
+        <% elsif security_level == "medium" %>
+          MEDIUM: <code>..%2F..%2F..%2Fetc%2Fpasswd</code> (URL encoded)<br>
+          MEDIUM: <code>..%2F..%2F.env</code>
+        <% elsif security_level == "high" %>
+          HIGH: <code>app/views/pages/index.html.erb</code> / <code>.env.example</code> / <code>README.md</code>
+        <% end %>
+      </div>
+
+      <% if @error %>
+        <div class="alert alert-alert"><%= @error %></div>
+      <% elsif @content %>
+        <div style="background:#f5f5f0; padding:15px; border-radius:4px; border-left:4px solid #1e3a8a">
+          <p style="margin:0 0 10px; color:#666"><strong>File:</strong> <%= @filename %></p>
+          <pre style="margin:0; overflow-x:auto; color:#2c2c2c; max-height:400px"><%= h(@content) %></pre>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</section>
